@@ -2,7 +2,7 @@
 current_path=$(pwd)
 if [ ! -d ${current_path}/logs ]
 then
-    mkdir ${current_path}/logs
+    mkdir -p ${current_path}/logs/dpkg
 fi
 
 c_echo() {
@@ -45,7 +45,7 @@ then
     if [ -s ${current_path}/lib/ansible ]
     then
 	cd ${current_path}/lib/ansible
-	dpkg -i *.deb &> ${current_path}/logs/ansible_install.log
+	dpkg -i *.deb &> ${current_path}/logs/dpkg/ansible_install.log
 	if [ ${?} -ne 0 ]
 	then
 	    echo "Ansible failed to install. Check the log" | tee ${infolog} | tee -a ${errorlog} &> /dev/null
@@ -72,7 +72,7 @@ then
     if [ -s ${current_path}/lib/sshpass ]
     then
 	cd ${current_path}/lib/sshpass
-	dpkg -i *.deb &> ${current_path}/logs/sshpass_install.log
+	dpkg -i *.deb &> ${current_path}/logs/dpkg/sshpass_install.log
 	if [ ${?} -ne 0 ]
 	then
 	    echo "sshpass failed to install. Check the log" | tee ${infolog} | tee -a ${errorlog} &> /dev/null
@@ -88,6 +88,60 @@ then
     else
         echo "${current_path}/lib/sshpass under deb packages not found." | tee ${infolog} | tee -a ${errorlog} &> /dev/null
 	c_echo "Failed to install dependency package's. Check the logs :@b@red[[ Failed ]]"
+        echo "failed" > ${statuslog}
+        exit 1
+    fi
+fi
+sleep 2
+which zip &> /dev/null
+if [ ${?} -ne 0 ]
+then
+    if [ -s ${current_path}/lib/zip ]
+    then
+        cd ${current_path}/lib/zip
+        dpkg -i *.deb &> ${current_path}/logs/dpkg/zip.log
+        if [ ${?} -ne 0 ]
+        then
+            echo "zip failed to install. Check the log" | tee ${infolog} | tee -a ${errorlog} &> /dev/null
+            c_echo "Failed to install dependency package's. Check the logs :@b@red[[ Failed ]]"
+            echo "failed" > ${statuslog}
+            cd ${current_path}
+            exit 1
+        else
+            echo "zip installed successfully." | tee ${infolog} | tee -a ${errorlog} &> /dev/null
+            ec=143
+            cd ${current_path}
+        fi
+    else
+        echo "${current_path}/lib/zip under deb packages not found." | tee ${infolog} | tee -a ${errorlog} &> /dev/null
+        c_echo "Failed to install dependency package's. Check the logs :@b@red[[ Failed ]]"
+        echo "failed" > ${statuslog}
+        exit 1
+    fi
+fi
+sleep 2
+which unzip &> /dev/null
+if [ ${?} -ne 0 ]
+then
+    if [ -s ${current_path}/lib/unzip ]
+    then
+        cd ${current_path}/lib/unzip
+        dpkg -i *.deb &> ${current_path}/logs/dpkg/unzip.log
+        if [ ${?} -ne 0 ]
+        then
+            echo "unzip failed to install. Check the log" | tee ${infolog} | tee -a ${errorlog} &> /dev/null
+            c_echo "Failed to install dependency package's. Check the logs :@b@red[[ Failed ]]"
+            echo "failed" > ${statuslog}
+            cd ${current_path}
+            exit 1
+        else
+            echo "unzip installed successfully." | tee ${infolog} | tee -a ${errorlog} &> /dev/null
+            ec=143
+            cd ${current_path}
+        fi
+    else
+        echo "${current_path}/lib/unzip under deb packages not found." | tee ${infolog} | tee -a ${errorlog} &> /dev/null
+        c_echo "Failed to install dependency package's. Check the logs :@b@red[[ Failed ]]"
         echo "failed" > ${statuslog}
         exit 1
     fi
@@ -125,9 +179,9 @@ echo -e "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 echo -e "\nJumpServer Dependency Packages Installation In-Progress" | tee ${infolog} | tee -a ${errorlog} &> /dev/null
 
 ubuntu_val=$(grep -Ec "NAME=\"Ubuntu\"|VERSION_ID=\"20.04\"|20.04.6" /etc/os-release 2>> ${errorlog})
-if [ ${ubuntu_val} -ne 3 ]
+if [ ${ubuntu_val} -ne 4 ]
 then
-    echo "The script will not work in $(grep -Ec "^NAME=|^VERSION_ID=" /etc/os-release)" | tee -a ${errorlog} | tee ${infolog} &> /dev/null
+    echo "The script will not work in $(grep -E "^NAME=|^VERSION_ID=" /etc/os-release)" | tee -a ${errorlog} | tee ${infolog} &> /dev/null
     echo "failed" > ${statuslog}
     c_echo "Failed - Ubuntu 20.04.6 required. Check the logs :@b@red[[ Failed ]]"
     exit 1
@@ -154,7 +208,7 @@ then
         exit 1
     fi
 fi
-for i in $(echo ansible sshpass)
+for i in $(echo ansible sshpass zip unzip)
 do
     if ! which ${i} &>> ${errorlog}
     then
